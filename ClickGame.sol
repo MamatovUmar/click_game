@@ -22,21 +22,18 @@ contract Game is Ownable {
         bool approve;
     }
     
-    mapping(address => User) public users;
-    
-    address public contractAddress;
+    mapping(address => User) private users;
     uint256 public decimals;
     
     event OnWithdraw(address indexed _account, uint256 _value);
     
-    constructor(address payable mftAddress) public payable {
+    constructor(address mftAddress) public {
         MILK2 = IERC20(mftAddress);
         decimals = MILK2.decimals();
-        contractAddress = address(this);
     }
     
     modifier hasBalance() {
-        require(balanceOfUser() >= 100, 'There are no MILK2 tokens on your balance');
+        require(balanceOfUser() >= 10**decimals, 'There are no MILK2 tokens on your balance');
         _;
     }
     
@@ -45,8 +42,8 @@ contract Game is Ownable {
         _;
     }
     
-    function balanceOf(address _adr) public view returns(uint256){
-        return MILK2.balanceOf(_adr);
+    function balanceOf(address _addr) public view returns(uint256){
+        return MILK2.balanceOf(_addr);
     }
     
     function balanceOfContract() public view returns(uint256) {
@@ -66,21 +63,19 @@ contract Game is Ownable {
     }
     
     function getPrize() private view returns(uint256){
-        uint256 balance = balanceOfUser();
         uint256 prize = (random() % 100) * 10**decimals;
         
-        if(balance > 10**4){
+        if(balanceOfUser() > 10**4){
             prize *= 10;
         }
         
         return prize;
     }
     
-    function play() public payable hasBalance approved{
-        uint256 contractBalance = balanceOfContract();
+    function play() public hasBalance approved {
         uint256 prize = getPrize();
         
-        require(prize <= contractBalance, 'Not enough MILK2 tokens on the contract balance');
+        require(prize <= balanceOfContract(), 'Not enough MILK2 tokens on the contract balance');
         
         users[msg.sender].prize = prize;
         users[msg.sender].win = true;
@@ -89,12 +84,12 @@ contract Game is Ownable {
         emit OnWithdraw(msg.sender, prize);
     }
     
-    function transferContractBalance(address payable _addr, uint256 _value) public payable onlyOwner{
-        MILK2.transfer(_addr, _value);
+    function transferContractBalance(address _receiver, uint256 _amount) public onlyOwner{
+        MILK2.transfer(_receiver, _amount);
     }
     
-    function getUser(address _addr) public view returns(uint256) {
-        return users[_addr].prize;
+    function getUser(address _addr) public view returns(bool, bool, uint256) {
+        return (users[_addr].win, users[_addr].approve, users[_addr].prize);
     }
     
     function allowance(address _addr) public view returns(bool) {
